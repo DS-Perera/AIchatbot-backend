@@ -64,7 +64,7 @@ if (fs.existsSync(userDataFilePath)) {
 
 // Function to save UserDataStore to a file
 const saveUserDataToFile = () => {
-  fs.writeFileSync(userDataFilePath, JSON.stringify(UserDataStore, null, 2));
+  fs.writeFileSync(userDataFilePath, JSON.stringify(UserDataStore));
 };
 
 // Initialize counters
@@ -85,8 +85,8 @@ async function getCompletionFromMessages(
         {
           role: "system",
           content: masterPrompt,
-        },
-        ...messages,
+        }, // Add master prompt as system message
+        ...messages, // Include user/system messages after the master prompt
       ],
       temperature: temperature,
       max_tokens: maxTokens,
@@ -103,6 +103,7 @@ async function getCompletionFromMessages(
 app.get("/chatHistory/:chatId", (req, res) => {
   const { chatId } = req.params;
 
+  // Check if chatHistory exists for the provided chatId
   if (chatHistories.hasOwnProperty(chatId)) {
     const chatHistory = chatHistories[chatId];
     res.json({ chatHistory });
@@ -122,16 +123,19 @@ app.get("/chatIds", (req, res) => {
 app.post("/sendMessage", async (req, res) => {
   const { chatId, message } = req.body;
 
+  // Initialize chat history if not exists
   if (!chatHistories.hasOwnProperty(chatId)) {
     chatHistories[chatId] = [];
     allChatIds.push(chatId);
     saveChatIdsToFile();
   }
 
+  // Add user message to chat history
   chatHistories[chatId].push({ role: "user", content: message });
   totalMessagesSent++;
 
   try {
+    // Get AI assistant response
     const completion = await getCompletionFromMessages(
       chatHistories[chatId],
       "gpt-3.5-turbo-0125",
@@ -140,8 +144,10 @@ app.post("/sendMessage", async (req, res) => {
       textareaContent
     );
 
+    // Add assistant response to chat history
     chatHistories[chatId].push({ role: "assistant", content: completion });
 
+    // Send response to client
     res.json({
       chatHistory: chatHistories[chatId],
       assistantResponse: completion,
@@ -154,12 +160,14 @@ app.post("/sendMessage", async (req, res) => {
 app.post("/sendMessagebot", async (req, res) => {
   const { chatId, message } = req.body;
 
+  // Initialize chat history if not exists
   if (!chatHistories.hasOwnProperty(chatId)) {
     chatHistories[chatId] = [];
     allChatIds.push(chatId);
     saveChatIdsToFile();
   }
 
+  // Add user message to chat history
   chatHistories[chatId].push({ role: "assistant", content: message });
   totalMessagesSent++;
 
@@ -171,12 +179,14 @@ app.post("/sendMessagebot", async (req, res) => {
 app.post("/sendMessageuser", async (req, res) => {
   const { chatId, message } = req.body;
 
+  // Initialize chat history if not exists
   if (!chatHistories.hasOwnProperty(chatId)) {
     chatHistories[chatId] = [];
     allChatIds.push(chatId);
     saveChatIdsToFile();
   }
 
+  // Add user message to chat history
   chatHistories[chatId].push({ role: "user", content: message });
   totalMessagesSent++;
 
@@ -188,12 +198,14 @@ app.post("/sendMessageuser", async (req, res) => {
 app.post("/sendMessagebotend", async (req, res) => {
   const { chatId } = req.body;
 
+  // Initialize chat history if not exists
   if (!chatHistories.hasOwnProperty(chatId)) {
     chatHistories[chatId] = [];
     allChatIds.push(chatId);
     saveChatIdsToFile();
   }
 
+  // Add system message to chat history
   chatHistories[chatId].push({
     role: "assistant",
     content: "Automate chat continued",
@@ -207,12 +219,14 @@ app.post("/sendMessagebotend", async (req, res) => {
 app.post("/sendMessagebotstart", async (req, res) => {
   const { chatId } = req.body;
 
+  // Initialize chat history if not exists
   if (!chatHistories.hasOwnProperty(chatId)) {
     chatHistories[chatId] = [];
     allChatIds.push(chatId);
     saveChatIdsToFile();
   }
 
+  // Add system message to chat history
   chatHistories[chatId].push({
     role: "assistant",
     content: "Manual chat continued",
@@ -227,6 +241,7 @@ app.post("/sendMessagebotstart", async (req, res) => {
 app.post("/sendMessagetobot", async (req, res) => {
   const { chatId } = req.body;
 
+  // Initialize chat history if not exists
   if (!chatHistories.hasOwnProperty(chatId)) {
     chatHistories[chatId] = [];
     allChatIds.push(chatId);
@@ -236,29 +251,35 @@ app.post("/sendMessagetobot", async (req, res) => {
     chatHistory: chatHistories[chatId],
   });
 });
-
+function getFormattedTime() {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const day = String(now.getDate()).padStart(2, "0");
+  const hours = String(now.getHours()).padStart(2, "0");
+  const minutes = String(now.getMinutes()).padStart(2, "0");
+  const seconds = String(now.getSeconds()).padStart(2, "0");
+  return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+}
 // Endpoint to submit user data
 app.post("/submitUserData", (req, res) => {
   const { chatId, name, number } = req.body;
 
-  // Check if the chatId already exists in userData
-  if (!userData[chatId]) {
-    userData[chatId] = { name, number };
+  // Store user data associated with chatId
+  userData[chatId] = { name, number };
 
-    // Push new user data to UserDataStore array
-    UserDataStore.push({
-      chatId,
-      name,
-      number,
-    });
+  // Push user data to UserDataStore array
+  UserDataStore.push({
+    chatId,
+    name,
+    number,
+    timestamp: getFormattedTime(),
+  });
 
-    // Save updated UserDataStore to file
-    saveUserDataToFile();
+  // Save updated UserDataStore to file
+  saveUserDataToFile();
 
-    res.status(200).json({ message: "User data saved successfully" });
-  } else {
-    res.status(400).json({ error: "User data already exists for this chatId" });
-  }
+  res.status(200).json({ message: "User data saved successfully" });
 });
 
 // Define a global variable to store text area content
@@ -290,6 +311,7 @@ app.get("/allChatHistory", (req, res) => {
 app.get("/userData/:chatId", (req, res) => {
   const { chatId } = req.params;
 
+  // Check if userData exists for the provided chatId
   if (userData.hasOwnProperty(chatId)) {
     res.json({ userData: userData[chatId] });
   } else {
