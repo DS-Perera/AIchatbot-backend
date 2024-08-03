@@ -23,9 +23,10 @@ const openai = new OpenAI({ apiKey });
 const chatHistories = {};
 const userData = {};
 
-// Path to the file storing chat IDs and user data
+// Paths to the files storing chat IDs, user data, and chat histories
 const chatIdsFilePath = path.join(__dirname, "chatIds.json");
 const userDataFilePath = path.join(__dirname, "userData.json");
+const chatHistoriesFilePath = path.join(__dirname, "chatHistories.json");
 
 // Function to generate a random chatId
 const generateChatId = () => {
@@ -45,9 +46,32 @@ if (fs.existsSync(chatIdsFilePath)) {
   fs.writeFileSync(chatIdsFilePath, JSON.stringify([]));
 }
 
+// Read chat histories from the file when the server starts
+let allChatHistories = [];
+if (fs.existsSync(chatHistoriesFilePath)) {
+  const data = fs.readFileSync(chatHistoriesFilePath, "utf-8");
+  allChatHistories = JSON.parse(data);
+  allChatHistories.forEach((chat) => {
+    chatHistories[chat.chatId] = chat.messages;
+    userData[chat.chatId] = chat.userData;
+  });
+} else {
+  fs.writeFileSync(chatHistoriesFilePath, JSON.stringify([]));
+}
+
 // Function to save chat IDs to the file
 const saveChatIdsToFile = () => {
   fs.writeFileSync(chatIdsFilePath, JSON.stringify(allChatIds));
+};
+
+// Function to save chat histories to the file
+const saveChatHistoriesToFile = () => {
+  const allChatHistories = Object.keys(chatHistories).map((chatId) => ({
+    chatId,
+    messages: chatHistories[chatId],
+    userData: userData[chatId] || { name: "", number: "" },
+  }));
+  fs.writeFileSync(chatHistoriesFilePath, JSON.stringify(allChatHistories));
 };
 
 // Initialize UserDataStore from a file if it exists
@@ -147,6 +171,9 @@ app.post("/sendMessage", async (req, res) => {
     // Add assistant response to chat history
     chatHistories[chatId].push({ role: "assistant", content: completion });
 
+    // Save updated chat histories to file
+    saveChatHistoriesToFile();
+
     // Send response to client
     res.json({
       chatHistory: chatHistories[chatId],
@@ -171,6 +198,9 @@ app.post("/sendMessagebot", async (req, res) => {
   chatHistories[chatId].push({ role: "assistant", content: message });
   totalMessagesSent++;
 
+  // Save updated chat histories to file
+  saveChatHistoriesToFile();
+
   res.json({
     chatHistory: chatHistories[chatId],
   });
@@ -189,6 +219,9 @@ app.post("/sendMessageuser", async (req, res) => {
   // Add user message to chat history
   chatHistories[chatId].push({ role: "user", content: message });
   totalMessagesSent++;
+
+  // Save updated chat histories to file
+  saveChatHistoriesToFile();
 
   res.json({
     chatHistory: chatHistories[chatId],
@@ -210,6 +243,9 @@ app.post("/sendMessagebotend", async (req, res) => {
     role: "assistant",
     content: "Automate chat continued",
   });
+
+  // Save updated chat histories to file
+  saveChatHistoriesToFile();
 
   res.json({
     chatHistory: chatHistories[chatId],
@@ -233,6 +269,9 @@ app.post("/sendMessagebotstart", async (req, res) => {
   });
   manualMessagesEnabledCount++;
 
+  // Save updated chat histories to file
+  saveChatHistoriesToFile();
+
   res.json({
     chatHistory: chatHistories[chatId],
   });
@@ -247,10 +286,12 @@ app.post("/sendMessagetobot", async (req, res) => {
     allChatIds.push(chatId);
     saveChatIdsToFile();
   }
+
   res.json({
     chatHistory: chatHistories[chatId],
   });
 });
+
 function getFormattedTime() {
   const now = new Date();
   const year = now.getFullYear();
@@ -261,6 +302,7 @@ function getFormattedTime() {
   const seconds = String(now.getSeconds()).padStart(2, "0");
   return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
 }
+
 // Endpoint to submit user data
 app.post("/submitUserData", (req, res) => {
   const { chatId, name, number } = req.body;

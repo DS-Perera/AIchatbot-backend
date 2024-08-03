@@ -1,0 +1,27 @@
+[
+    {
+        "chatId": "srbem4qvx",
+        "messages": [
+            {
+                "role": "user",
+                "content": "hi"
+            },
+            {
+                "role": "assistant",
+                "content": "Hello! How can I assist you today?"
+            },
+            {
+                "role": "user",
+                "content": "how are you?"
+            },
+            {
+                "role": "assistant",
+                "content": "I'm just a virtual assistant, so I don't have feelings, but thank you for asking! How can I help you today?"
+            }
+        ],
+        "userData": {
+            "name": "darshana",
+            "number": "0771461925"
+        }
+    }
+]
