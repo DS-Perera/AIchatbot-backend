@@ -23,6 +23,22 @@ const openai = new OpenAI({ apiKey });
 const chatHistories = {};
 const userData = {};
 
+//variables
+let welcomemsj = "Welcome";
+let userChatbotData = {
+  welcomeMessage: "Hi, Welcome to chatbot",
+  personalDetails:
+    "My name is Jayamini Sales manager of ABC company. With expertise in chatbot solutions, they are here to guide you through your options",
+  jobDescription:
+    "As an AI Chatbot salesperson, [Name] identifies client needs, presents solutions, and ensures satisfaction. They handle demos, manage accounts, and drive sales.",
+  companyDetails:
+    " ABC company, located in Chilaw, specializes in AI chatbot solutions. They offer custom development, integration, and support for diverse business needs",
+  productsServiceDescription:
+    " ABC company provides AI chatbots for customer service, sales, HR, and more. Services include design, integration, training, and ongoing support.",
+  contactDetails:
+    "Reach Darshana Perera via email at ds.perera.1997@gmail.com, phone at +94771461925, or LinkedIn at abc.linkedin.com. The office is located at 28/A,Ihla kudawewa,Kudawewa.",
+};
+
 // Paths to the files storing chat IDs, user data, and chat histories
 const chatIdsFilePath = path.join(__dirname, "chatIds.json");
 const userDataFilePath = path.join(__dirname, "userData.json");
@@ -100,7 +116,7 @@ async function getCompletionFromMessages(
   model = "gpt-3.5-turbo-0125",
   temperature = 0.7,
   maxTokens = 150,
-  masterPrompt = "Assume that you are Darshana Perera who is the marketing manager of ABC company. And your company is a soap company which produces lix, sunlight. Provide simple short answers"
+  masterPrompt = textareaContent
 ) {
   try {
     const response = await openai.chat.completions.create({
@@ -108,7 +124,7 @@ async function getCompletionFromMessages(
       messages: [
         {
           role: "system",
-          content: masterPrompt,
+          content: textareaContent,
         }, // Add master prompt as system message
         ...messages, // Include user/system messages after the master prompt
       ],
@@ -326,15 +342,28 @@ app.post("/submitUserData", (req, res) => {
 
 // Define a global variable to store text area content
 let textareaContent =
-  "Assume that you are Darshana Perera who is the marketing manager of ABC company. And your company is a soap company which produces lix, sunlight. Provide simple short answers";
+  "Consider this content as the knowledgebase for you. You are My name is Jayamini Sales manager of ABC company. With expertise in chatbot solutions, they are here to guide you through your optionsAnd jour job description is As an AI Chatbot salesperson, [Name] identifies client needs, presents solutions, and ensures satisfaction. They handle demos, manage accounts, and drive sales.And company details are ABC company, located in Chilaw, specializes in AI chatbot solutions. They offer custom development, integration, and support for diverse business needsAnd providing service description is ABC company provides AI chatbots for customer service, sales, HR, and more. Services include design, integration, training, and ongoing support.Your contact details are Reach Darshana Perera via email at ds.perera.1997@gmail.com, phone at +94771461925, or LinkedIn at abc.linkedin.com. The office is located at 28/A,Ihla kudawewa,Kudawewa.You must use these content to answer to the questions in the chatbot";
 
 // Endpoint to store text area content
 app.post("/storeTextareaContent", (req, res) => {
-  const { content } = req.body;
-
+  const content = req.body;
+  welcomemsj = content.welcomeMessage;
+  userChatbotData = content;
   // Store content in global variable
-  textareaContent = content;
+  textareaContent =
+    "Consider this content as the knowledgebase for you. You are " +
+    content.personalDetails +
+    ". And jour job description is " +
+    content.jobDescription +
+    ". And company details are" +
+    content.companyDetails +
+    ". And providing service description is" +
+    content.productsServiceDescription +
+    ". Your contact details are " +
+    content.contactDetails +
+    ". You must use these content to answer to the questions in the chatbot";
 
+  console.log("Knowledge updated.");
   res.status(200).json({ message: "Text area content stored successfully" });
 });
 
@@ -347,6 +376,14 @@ app.get("/allChatHistory", (req, res) => {
   }));
 
   res.json({ chatHistories: allChatHistories });
+});
+// Update the /allChatHistory endpoint to include user data
+app.get("/userExistingData", (req, res) => {
+  res.json(userChatbotData);
+});
+// Update the /allChatHistory endpoint to include user data
+app.get("/chatStartingMsj", (req, res) => {
+  res.json(welcomemsj);
 });
 
 // Define an endpoint to get user data for a given chatId
